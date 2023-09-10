@@ -1,0 +1,36 @@
+# Import libraries
+import pandas as pd
+import numpy as np
+
+# Define data sources
+ad_data = "ad_data.csv" # Ad data from ad platforms
+web_data = "web_data.csv" # Web data from web analytics
+keyword_data = "keyword_data.csv" # Keyword data from keyword tools
+
+# Load data from CSV files
+ad_df = pd.read_csv(ad_data)
+web_df = pd.read_csv(web_data)
+keyword_df = pd.read_csv(keyword_data)
+
+# Merge data from different sources into one dataframe
+# Use a common key such as page_url or ad_id to join the dataframes
+ad_df = ad_df.merge(web_df, on="page_url", how="left")
+ad_df = ad_df.merge(keyword_df, on="ad_id", how="left")
+
+# Check the shape and columns of the dataframe
+print(ad_df.shape)
+print(ad_df.columns)
+
+# Check the data types and missing values of the dataframe
+print(ad_df.info())
+
+# Check the summary statistics of the dataframe
+print(ad_df.describe())
+
+# Clean and impute missing values if needed
+# For example, use mean imputation for numeric variables and mode imputation for categorical variables
+ad_df = ad_df.fillna(ad_df.mean())
+ad_df = ad_df.fillna(ad_df.mode().iloc[0])
+
+# Save the cleaned data in a CSV file named ad_data.csv
+ad_df.to_csv("ad_data.csv", index=False)

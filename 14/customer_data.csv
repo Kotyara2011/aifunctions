@@ -1,0 +1,41 @@
+# Import libraries
+import pandas as pd
+import numpy as np
+
+# Define data sources
+crm_data = "crm_data.csv" # Customer data from CRM system
+web_data = "web_data.csv" # Customer data from website analytics
+social_data = "social_data.csv" # Customer data from social media
+survey_data = "survey_data.csv" # Customer data from surveys
+
+# Load data from CSV files
+crm_df = pd.read_csv(crm_data)
+web_df = pd.read_csv(web_data)
+social_df = pd.read_csv(social_data)
+survey_df = pd.read_csv(survey_data)
+
+# Merge data from different sources into one dataframe
+customer_df = crm_df.merge(web_df, on="customer_id", how="left")
+customer_df = customer_df.merge(social_df, on="customer_id", how="left")
+customer_df = customer_df.merge(survey_df, on="customer_id", how="left")
+
+# Check the shape and columns of the dataframe
+print(customer_df.shape)
+print(customer_df.columns)
+
+# Check the data types and missing values of the dataframe
+print(customer_df.info())
+
+# Check the summary statistics of the dataframe
+print(customer_df.describe())
+
+# Check the distribution of the target variable (churn)
+print(customer_df["churn"].value_counts())
+
+# Clean and impute missing values if needed
+# For example, use mean imputation for numeric variables and mode imputation for categorical variables
+customer_df = customer_df.fillna(customer_df.mean())
+customer_df = customer_df.fillna(customer_df.mode().iloc[0])
+
+# Save the cleaned data in a CSV file named customer_data.csv
+customer_df.to_csv("customer_data.csv", index=False)

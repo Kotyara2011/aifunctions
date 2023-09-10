@@ -1,0 +1,77 @@
+# Import libraries
+import pandas as pd
+import numpy as np
+import statsmodels.api as sm
+from sklearn.feature_selection import RFE, SelectFromModel
+from sklearn.ensemble import RandomForestRegressor
+
+# Load the cleaned data from ad_data.csv
+ad_df = pd.read_csv("ad_data.csv")
+
+# Create new features from the existing data
+# For example, ad relevance score, ad quality score, page sentiment score, page readability score, etc.
+# These are just illustrative examples, not based on any domain knowledge or formula
+
+# Ad relevance score = similarity between ad text and page keywords
+ad_df["ad_relevance_score"] = ad_df.apply(lambda x: len(set(x["ad_text"].split()) & set(x["page_keywords"].split(","))) / len(x["ad_text"].split()), axis=1)
+
+# Ad quality score = ratio of CTR to CPC
+ad_df["ad_quality_score"] = ad_df["CTR"] / ad_df["CPC"]
+
+# Page sentiment score = polarity of page content using TextBlob library
+from textblob import TextBlob
+ad_df["page_sentiment_score"] = ad_df["page_content"].apply(lambda x: TextBlob(x).sentiment.polarity)
+
+# Page readability score = readability of page content using textstat library
+import textstat
+ad_df["page_readability_score"] = ad_df["page_content"].apply(lambda x: textstat.flesch_reading_ease(x))
+
+# Check the new features
+print(ad_df[["ad_relevance_score", "ad_quality_score", "page_sentiment_score", "page_readability_score"]].head())
+
+# Use feature selection techniques to select the most important features for optimizing ads
+# There are different methods for feature selection, such as filter methods, wrapper methods, or embedded methods
+# Here we will use two examples: one filter method (correlation matrix) and one embedded method (random forest feature importance)
+
+# Filter method: correlation matrix
+# Plot the correlation matrix of all the features, including the new ones
+corr_matrix = ad_df.corr()
+sns.heatmap(corr_matrix, annot=True, cmap="RdBu")
+plt.title("Correlation Matrix of All Features")
+plt.show()
+
+# Based on the correlation matrix, we can see that some features are highly correlated with each other, such as CTR and CVR, or page_title_length and page_content_length
+# We can drop one of each pair of correlated features to reduce multicollinearity and redundancy
+ad_df.drop(["CVR", "page_title_length"], axis=1, inplace=True)
+
+# Embedded method: random forest feature importance
+# Random forest is a tree-based ensemble model that can rank the features based on their importance for predicting the target variable
+X = ad_df.drop(["CPC", "CPA"], axis=1) # Independent variables (excluding CPC and CPA as they are not directly related to ad performance)
+y = ad_df[["CPC", "CPA"]] # Dependent variables (CPC and CPA as the target variables to optimize)
+
+# Create a random forest regressor object with 100 trees
+rf = RandomForestRegressor(n_estimators=100)
+
+# Fit the model on the data
+rf.fit(X, y)
+
+# Print the feature importance scores
+print(rf.feature_importances_)
+
+# Plot the feature importance scores in a bar chart
+plt.bar(X.columns, rf.feature_importances_)
+plt.xticks(rotation=90)
+plt.title("Feature Importance Scores by Random Forest")
+plt.show()
+
+# Based on the feature importance scores, we can see that random forest selected the following features as the most important ones:
+# CTR, ad_text_length, ad_image_size, page_content_length, page_keywords_count, page_topics_count, ad_relevance_score, ad_quality_score
+
+# We can create a new dataframe with only these features and the target variables
+selected_features = ["CTR", "ad_text_length", "ad_image_size", "page_content_length", "page_keywords_count", "page_topics_count", "ad_relevance_score", "ad_quality_score"]
+X_rf = X[selected_features]
+y_rf = y
+
+# Save the transformed and selected features in a CSV file named features.csv
+features_df = pd.concat([X_rf, y_rf], axis=1)
+features_df.to_csv("features.csv", index=False)

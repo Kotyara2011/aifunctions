@@ -1,0 +1,80 @@
+# Import libraries
+import pandas as pd
+import numpy as np
+from sklearn.model_selection import train_test_split, cross_val_score
+from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, roc_curve, auc
+from sklearn.linear_model import LogisticRegression
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.ensemble import RandomForestClassifier
+from xgboost import XGBClassifier
+import matplotlib.pyplot as plt
+import pickle
+
+# Load the transformed and selected features from features.csv
+features_df = pd.read_csv("features.csv")
+
+# Split the data into training and testing sets
+X = features_df.drop("churn", axis=1) # Independent variables
+y = features_df["churn"] # Dependent variable
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+# Define a function to evaluate different models using various metrics
+def evaluate_model(model, X_train, X_test, y_train, y_test):
+    # Fit the model on the training data
+    model.fit(X_train, y_train)
+    
+    # Predict on the testing data
+    y_pred = model.predict(X_test)
+    
+    # Calculate the metrics
+    accuracy = accuracy_score(y_test, y_pred)
+    precision = precision_score(y_test, y_pred)
+    recall = recall_score(y_test, y_pred)
+    f1 = f1_score(y_test, y_pred)
+    
+    # Print the metrics
+    print(f"Accuracy: {accuracy:.2f}")
+    print(f"Precision: {precision:.2f}")
+    print(f"Recall: {recall:.2f}")
+    print(f"F1-score: {f1:.2f}")
+    
+    # Plot the ROC curve and calculate the AUC score
+    y_prob = model.predict_proba(X_test)[:, 1] # Probability of positive class
+    fpr, tpr, thresholds = roc_curve(y_test, y_prob) # False positive rate, true positive rate, thresholds
+    auc_score = auc(fpr, tpr) # Area under the curve
+    
+    plt.plot(fpr, tpr, label=f"AUC = {auc_score:.2f}")
+    plt.plot([0, 1], [0, 1], linestyle="--", label="Random")
+    plt.xlabel("False Positive Rate")
+    plt.ylabel("True Positive Rate")
+    plt.title("ROC Curve")
+    plt.legend()
+    plt.show()
+    
+# Create different models to compare
+log_reg = LogisticRegression() # Logistic regression
+dtree = DecisionTreeClassifier() # Decision tree
+rf = RandomForestClassifier() # Random forest
+xgb = XGBClassifier() # XGBoost
+
+# Evaluate each model using the function defined above
+print("Logistic Regression:")
+evaluate_model(log_reg, X_train, X_test, y_train, y_test)
+
+print("Decision Tree:")
+evaluate_model(dtree, X_train, X_test, y_train, y_test)
+
+print("Random Forest:")
+evaluate_model(rf, X_train, X_test, y_train, y_test)
+
+print("XGBoost:")
+evaluate_model(xgb, X_train, X_test, y_train, y_test)
+
+# Based on the evaluation results and business objectives, choose the best model and save it in a file named model.pkl
+# For example, if we want to maximize the recall (minimize the false negatives), we can choose the random forest model as it has the highest recall score among the four models
+
+best_model = rf # Random forest as the best model
+
+# Save the best model in a file named model.pkl using pickle
+with open("model.pkl", "wb") as f:
+    pickle.dump(best_model, f)

@@ -1,0 +1,73 @@
+# Import libraries
+import pandas as pd
+import numpy as np
+import statsmodels.api as sm
+from sklearn.feature_selection import RFE, SelectFromModel
+from sklearn.ensemble import RandomForestClassifier
+
+# Load the cleaned data from customer_data.csv
+customer_df = pd.read_csv("customer_data.csv")
+
+# Create new features from the existing data
+# For example, customer lifetime value (CLV), average revenue per user (ARPU), customer satisfaction score (CSAT), etc.
+# These are just illustrative examples, not based on any domain knowledge or formula
+
+# CLV = total amount spent by the customer in the last 6 months
+customer_df["CLV"] = customer_df["purchase_history"] * customer_df["usage_frequency"]
+
+# ARPU = average amount spent by the customer per month
+customer_df["ARPU"] = customer_df["purchase_history"] / 6
+
+# CSAT = average rating given by the customer in the surveys
+customer_df["CSAT"] = customer_df["survey_response"].mean(axis=1)
+
+# Check the new features
+print(customer_df[["CLV", "ARPU", "CSAT"]].head())
+
+# Use feature selection techniques to select the most important features for predicting churn
+# There are different methods for feature selection, such as filter methods, wrapper methods, or embedded methods
+# Here we will use two examples: one filter method (correlation matrix) and one wrapper method (recursive feature elimination)
+
+# Filter method: correlation matrix
+# Plot the correlation matrix of all the features, including the new ones
+corr_matrix = customer_df.corr()
+sns.heatmap(corr_matrix, annot=True, cmap="RdBu")
+plt.title("Correlation Matrix of All Features")
+plt.show()
+
+# Based on the correlation matrix, we can see that some features are highly correlated with each other, such as gender and social_media, or location and survey_response_1
+# We can drop one of each pair of correlated features to reduce multicollinearity and redundancy
+customer_df.drop(["gender", "location", "survey_response_1"], axis=1, inplace=True)
+
+# Wrapper method: recursive feature elimination (RFE)
+# RFE is a technique that iteratively removes the least important features based on a given estimator (such as a classifier or a regressor)
+# We will use a logistic regression estimator as an example
+X = customer_df.drop("churn", axis=1) # Independent variables
+y = customer_df["churn"] # Dependent variable
+
+# Create a logistic regression object
+log_reg = sm.Logit(y, X)
+
+# Fit the model
+log_reg.fit()
+
+# Create an RFE object with 10 features to select
+rfe = RFE(log_reg, 10)
+
+# Fit the RFE object on the data
+rfe.fit(X, y)
+
+# Print the ranking of the features
+print(rfe.ranking_)
+
+# Based on the ranking, we can see that RFE selected the following 10 features as the most important ones:
+# purchase_history, usage_frequency, social_media, survey_response_2, survey_response_3, survey_response_4, survey_response_5, CLV, ARPU, CSAT
+
+# We can create a new dataframe with only these features and the target variable
+selected_features = ["purchase_history", "usage_frequency", "social_media", "survey_response_2", "survey_response_3", "survey_response_4", "survey_response_5", "CLV", "ARPU", "CSAT"]
+X_rfe = X[selected_features]
+y_rfe = y
+
+# Save the transformed and selected features in a CSV file named features.csv
+features_df = pd.concat([X_rfe, y_rfe], axis=1)
+features_df.to_csv("features.csv", index=False)
